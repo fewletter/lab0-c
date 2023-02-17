@@ -173,8 +173,9 @@ void q_swap(struct list_head *head)
         return;
 
     struct list_head *node;
-    list_for_each (node, head->next)
+    list_for_each (node, head) {
         list_move(node, node->next);
+    }
 }
 
 /* Reverse elements in queue */
