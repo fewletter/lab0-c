@@ -200,6 +200,25 @@ void q_reverseK(struct list_head *head, int k)
     // https://leetcode.com/problems/reverse-nodes-in-k-group/
     if (!head || k <= 1)
         return;
+
+    struct list_head *node, *anchor = head;
+    LIST_HEAD(empty);
+    struct list_head *start;
+    int count = 0;
+    int time_mark = 0;
+    int size = q_size(head);
+    list_for_each_safe (node, start, head) {
+        count++;
+        if (count == k && (size - time_mark) >= k) {
+            list_move(node, &empty);
+            q_reverse(&empty);
+            list_splice_init(&empty, anchor);
+            count = 0;
+            time_mark += k;
+            anchor = start->prev;
+
+        }
+    }
 }
 
 /* Remove every node which has a node with a strictly greater value anywhere to
@@ -228,15 +247,6 @@ int q_merge(struct list_head *head)
     return 0;
 }
 
-// struct list_head *mergeTwoLists(struct list_head *L1, struct list_head *L2)
-// {
-
-// }
-
-// struct list_head *merge_sort(struct list_head *head)
-// {
-
-// }
 
 /* Sort elements of queue in ascending order */
 void q_sort(struct list_head *head) {}
