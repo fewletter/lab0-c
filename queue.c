@@ -201,22 +201,21 @@ void q_reverseK(struct list_head *head, int k)
     if (!head || k <= 1)
         return;
 
-    struct list_head *node, *anchor = head;
+    struct list_head *node, *start, *anchor = head;
     LIST_HEAD(empty);
-    struct list_head *start;
     int count = 0;
     int time_mark = 0;
     int size = q_size(head);
     list_for_each_safe (node, start, head) {
         count++;
-        if (count == k && (size - time_mark) >= k) {
+        if (count <= k && (size - time_mark) >= k) {
             list_move(node, &empty);
-            q_reverse(&empty);
-            list_splice_init(&empty, anchor);
-            count = 0;
-            time_mark += k;
-            anchor = start->prev;
-
+            if (count == k) {
+                list_splice_init(&empty, anchor);
+                count = 0;
+                time_mark += k;
+                anchor = start->prev;
+            }
         }
     }
 }
@@ -230,20 +229,22 @@ int q_descend(struct list_head *head)
     while (node != head) {
         element_t *criterion = list_entry(base, element_t, list);
         element_t *tmp = list_entry(node, element_t, list);
-        if (strcmp(criterion->value, tmp->value) < 0) {
+        if (strcmp(criterion->value, tmp->value) < 0)
             criterion = tmp;
-        } else {
+        else
             list_del(&tmp->list);
-        }
         node = node->prev;
     }
     return q_size(head);
 }
 
+
+
 /* Merge all the queues into one sorted queue, which is in ascending order */
 int q_merge(struct list_head *head)
 {
     // https://leetcode.com/problems/merge-k-sorted-lists/
+
     return 0;
 }
 
