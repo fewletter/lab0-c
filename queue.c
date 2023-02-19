@@ -1,6 +1,8 @@
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
 
 #include "queue.h"
 
@@ -238,16 +240,32 @@ int q_descend(struct list_head *head)
     return q_size(head);
 }
 
-
+struct list_head *mergeTwolists(struct list_head *L1, struct list_head *L2)
+{
+    struct list_head *head = NULL, **ptr = &head, **node = NULL;
+    while (L1 && L2) {
+        element_t *L1_entry = list_entry(L1, element_t, list);
+        element_t *L2_entry = list_entry(L2, element_t, list);
+        node = strcmp(L1_entry->value, L2_entry->value) < 0 ? &L1 : &L2;
+        *ptr = *node;
+        ptr = &(*ptr)->next;
+        *node = (*node)->next;
+    }
+    *ptr = (struct list_head *) ((uintptr_t) L1 | (uintptr_t) L2);
+    return head;
+}
 
 /* Merge all the queues into one sorted queue, which is in ascending order */
 int q_merge(struct list_head *head)
 {
     // https://leetcode.com/problems/merge-k-sorted-lists/
-
     return 0;
 }
 
+struct list_head *merge_sort(struct list_head *head)
+{
+    return NULL;
+}
 
 /* Sort elements of queue in ascending order */
 void q_sort(struct list_head *head) {}
