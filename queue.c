@@ -145,25 +145,24 @@ bool q_delete_mid(struct list_head *head)
 bool q_delete_dup(struct list_head *head)
 {
     // https://leetcode.com/problems/remove-duplicates-from-sorted-list-ii/
-    if (!head || list_empty(head))
+    if (!head || list_empty(head) || list_is_singular(head))
         return false;
-
-    struct list_head *next = head->next->next;
-    struct list_head *node = head->next;
-
-    while (node != head) {
-        while (next != head) {
-            element_t *ele_next = list_entry(next, element_t, list);
-            element_t *ele_node = list_entry(node, element_t, list);
-            if (strcmp(ele_node->value, ele_next->value)) {
-                list_del(&ele_next->list);
-                q_release_element(ele_next);
-            } else
-                next = next->next;
+    bool diff = false;
+    struct list_head *curr, *safe;
+    list_for_each_safe (curr, safe, head) {
+        struct list_head *next = curr->next;
+        element_t *curr_entry = list_entry(curr, element_t, list);
+        element_t *next_entry = list_entry(next, element_t, list);
+        if ((next != head) && (!strcmp(curr_entry->value, next_entry->value))) {
+            list_del(curr);
+            q_release_element(curr_entry);
+            diff = true;
+        } else if (diff) {
+            list_del(curr);
+            q_release_element(curr_entry);
+            diff = false;
         }
-        node = node->next;
     }
-
     return true;
 }
 
@@ -227,16 +226,21 @@ void q_reverseK(struct list_head *head, int k)
 int q_descend(struct list_head *head)
 {
     // https://leetcode.com/problems/remove-nodes-from-linked-list/
-    struct list_head *base = head->prev, *node = head->prev->prev;
-    while (node != head) {
-        element_t *criterion = list_entry(base, element_t, list);
+    struct list_head *node, *safe;
+    char *s = list_entry(head->prev, element_t, list)->value;
+    for (node = (head)->prev, safe = node->prev; node != (head);
+         node = safe, safe = node->prev) {
         element_t *tmp = list_entry(node, element_t, list);
-        if (strcmp(criterion->value, tmp->value) < 0)
-            criterion = tmp;
-        else
-            list_del(&tmp->list);
-        node = node->prev;
+        if (node != head->prev) {
+            if (strcmp(s, tmp->value) < 0) {
+                s = tmp->value;
+            } else {
+                list_del(&tmp->list);
+                q_release_element(tmp);
+            }
+        }
     }
+
     return q_size(head);
 }
 
@@ -259,13 +263,38 @@ struct list_head *mergeTwolists(struct list_head *L1, struct list_head *L2)
 int q_merge(struct list_head *head)
 {
     // https://leetcode.com/problems/merge-k-sorted-lists/
+
     return 0;
 }
 
 struct list_head *merge_sort(struct list_head *head)
 {
-    return NULL;
+    if (!head || !head->next)
+        return head;
+    struct list_head *slow = head;
+    for (struct list_head *fast = head->next; fast && fast->next;
+         fast = fast->next->next) {
+        slow = slow->next;
+    }
+    struct list_head *mid = slow->next;
+    slow->next = NULL;
+    struct list_head *left = merge_sort(head), *right = merge_sort(mid);
+    return mergeTwolists(left, right);
 }
 
 /* Sort elements of queue in ascending order */
-void q_sort(struct list_head *head) {}
+void q_sort(struct list_head *head)
+{
+    if (!head || list_empty(head) || list_is_singular(head))
+        return;
+    head->prev->next = NULL;
+    head->next = merge_sort(head->next);
+    struct list_head *curr = head, *next = curr->next;
+    while (next) {
+        next->prev = curr;
+        curr = next;
+        next = next->next;
+    }
+    curr->next = head;
+    head->prev = curr;
+}
