@@ -173,9 +173,10 @@ void q_swap(struct list_head *head)
     if (!head || list_empty(head) || list_is_singular(head))
         return;
 
-    struct list_head *node;
-    list_for_each (node, head) {
-        list_move(node, node->next);
+    struct list_head *node, *safe;
+    for (node = (head)->next, safe = node->next; node != (head) && safe != head;
+         node = node->next, safe = node->next) {
+        list_move(node, safe);
     }
 }
 
