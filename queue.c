@@ -264,8 +264,30 @@ struct list_head *mergeTwolists(struct list_head *L1, struct list_head *L2)
 int q_merge(struct list_head *head)
 {
     // https://leetcode.com/problems/merge-k-sorted-lists/
+    if (list_is_singular(head))
+        return list_entry(head, queue_contex_t, chain)->size;
 
-    return 0;
+    struct list_head *merge_node = NULL;
+
+    queue_contex_t *q_head = list_entry(head->next, queue_contex_t, chain);
+    queue_contex_t *iter;
+    list_for_each_entry (iter, head, chain) {
+        iter->q->prev->next = NULL;
+        merge_node = mergeTwolists(merge_node, iter->q->next);
+        INIT_LIST_HEAD(iter->q);
+    }
+
+    q_head->q->next = merge_node;
+    struct list_head *curr = q_head->q, *next = curr->next;
+    while (next) {
+        next->prev = curr;
+        curr = next;
+        next = next->next;
+    }
+    curr->next = q_head->q;
+    q_head->q->prev = curr;
+
+    return q_size(q_head->q);
 }
 
 struct list_head *merge_sort(struct list_head *head)
