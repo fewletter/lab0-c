@@ -42,6 +42,7 @@ extern int show_entropy;
  * OK as long as head field of queue_t structure is in first position in
  * solution code
  */
+#include "list_sort.h"
 #include "queue.h"
 
 #include "console.h"
@@ -624,6 +625,60 @@ static bool do_size(int argc, char *argv[])
     return ok && !error_check();
 }
 
+__attribute__((nonnull(2, 3))) static int cmp(void *priv,
+                                              const struct list_head *list1,
+                                              const struct list_head *list2)
+{
+    element_t *list1_entry = list_entry(list1, element_t, list);
+    element_t *list2_entry = list_entry(list2, element_t, list);
+    return strcmp(list1_entry->value, list2_entry->value) < 0 ? 0 : 1;
+}
+
+bool do_linux_sort(int argc, char *argv[])
+{
+    if (argc != 1) {
+        report(1, "%s takes no arguments", argv[0]);
+        return false;
+    }
+
+    int cnt = 0;
+    if (!current || !current->q)
+        report(3, "Warning: Calling sort on null queue");
+    else
+        cnt = q_size(current->q);
+    error_check();
+
+    if (cnt < 2)
+        report(3, "Warning: Calling sort on single node");
+    error_check();
+
+    set_noallocate_mode(true);
+    if (current && exception_setup(true))
+        list_sort(NULL, current->q, cmp);
+    exception_cancel();
+    set_noallocate_mode(false);
+
+    bool ok = true;
+    if (current && current->size) {
+        for (struct list_head *cur_l = current->q->next;
+             cur_l != current->q && --cnt; cur_l = cur_l->next) {
+            /* Ensure each element in ascending order */
+            /* FIXME: add an option to specify sorting order */
+            element_t *item, *next_item;
+            item = list_entry(cur_l, element_t, list);
+            next_item = list_entry(cur_l->next, element_t, list);
+            if (strcmp(item->value, next_item->value) > 0) {
+                report(1, "ERROR: Not sorted in ascending order");
+                ok = false;
+                break;
+            }
+        }
+    }
+
+    q_show(3);
+    return ok && !error_check();
+}
+
 bool do_sort(int argc, char *argv[])
 {
     if (argc != 1) {
@@ -981,6 +1036,38 @@ static bool do_next(int argc, char *argv[])
     return q_show(0);
 }
 
+void q_shuffle(struct list_head *head)
+{
+    if (!head || list_empty(head) || list_is_singular(head))
+        return;
+    int len = q_size(head);
+
+    while (len != 0) {
+        struct list_head *node = head->next;
+        int pos = rand() % len;
+        for (int i = 0; i < pos; i++)
+            node = node->next;
+        list_move_tail(node, head);
+        len--;
+    }
+};
+
+static bool do_shuffle()
+{
+    if (!current || !current->q)
+        report(3, "Warning: Calling shuffle on null queue");
+    error_check();
+
+    set_noallocate_mode(true);
+    if (exception_setup(true))
+        q_shuffle(current->q);
+    exception_cancel();
+
+    set_noallocate_mode(false);
+    q_show(3);
+    return !error_check();
+}
+
 static void console_init()
 {
     ADD_COMMAND(new, "Create new queue", "");
@@ -1005,6 +1092,8 @@ static void console_init()
         "[str]");
     ADD_COMMAND(reverse, "Reverse queue", "");
     ADD_COMMAND(sort, "Sort queue in ascending order", "");
+    ADD_COMMAND(linux_sort,
+                "Sort queue in ascending order by using Linux kernel", "");
     ADD_COMMAND(size, "Compute queue size n times (default: n == 1)", "[n]");
     ADD_COMMAND(show, "Show queue contents", "");
     ADD_COMMAND(dm, "Delete middle node in queue", "");
@@ -1015,6 +1104,7 @@ static void console_init()
                 "Remove every node which has a node with a strictly greater "
                 "value anywhere to the right side of it",
                 "");
+    ADD_COMMAND(shuffle, "Shuffle the queue", "");
     ADD_COMMAND(reverseK, "Reverse the nodes of the queue 'K' at a time",
                 "[K]");
     add_param("length", &string_length, "Maximum length of displayed string",
@@ -1054,7 +1144,6 @@ static void q_init()
 
 static bool q_quit(int argc, char *argv[])
 {
-    return true;
     report(3, "Freeing queue");
     if (current && current->size > BIG_LIST_SIZE)
         set_cautious_mode(false);
